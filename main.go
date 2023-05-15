@@ -6,6 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
+	"github.com/sfqa-app/backend/database"
 	"github.com/sfqa-app/backend/routes"
 )
 
@@ -25,6 +26,8 @@ func init() {
 	if port == "" {
 		port = defaultPort
 	}
+
+  database.ConnectDb()
 }
 
 func main() {

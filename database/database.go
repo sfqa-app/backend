@@ -1,7 +1,10 @@
 package database
 
 import (
+	"fmt"
 	"log"
+	"os"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -15,21 +18,41 @@ type Dbinstance struct {
 var Db Dbinstance
 
 func ConnectDb() {
-	dsn := "host=localhost user=postgres password='' dbname=go-db port=5432 sslmode=disable TimeZone=Asia/Beirut"
+	log.Println("connecting to database...")
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
-	})
+	host := os.Getenv("DB_HOST")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	name := os.Getenv("DB_NAME")
+	port := os.Getenv("DB_PORT")
 
-	if err != nil {
-		log.Fatal("Failed to connect to database. \n", err)
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+		host,
+		user,
+		password,
+		name,
+		port,
+	)
+
+	var db *gorm.DB
+	var err error
+
+	for i := 1; i <= 5; i++ {
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Info),
+		})
+
+		if err != nil {
+			log.Printf("Failed to connect to database (try %d). \n", i)
+			time.Sleep(5 * time.Second)
+		} else {
+      log.Println("connected to database")
+			break
+		}
 	}
 
-	log.Println("connected")
 	db.Logger = logger.Default.LogMode(logger.Info)
-	log.Println("running migrations")
-
-	db.AutoMigrate(&models.User{})
 
 	Db = Dbinstance{
 		Db: db,
