@@ -22,37 +22,32 @@ func ConnectDb() {
 
 	host := os.Getenv("DB_HOST")
 	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
+	pass := os.Getenv("DB_PASSWORD")
 	name := os.Getenv("DB_NAME")
 	port := os.Getenv("DB_PORT")
 
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-		host,
-		user,
-		password,
-		name,
-		port,
+		host, user, pass, name, port,
 	)
 
 	var db *gorm.DB
 	var err error
+	var reconnectSecondsInterval time.Duration = 5
 
-	for i := 1; i <= 5; i++ {
+	for {
 		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 			Logger: logger.Default.LogMode(logger.Info),
 		})
 
 		if err != nil {
-			log.Printf("Failed to connect to database (try %d). \n", i)
-			time.Sleep(5 * time.Second)
+			log.Printf("Failed to connect to database, retrying in %v seconds\n", reconnectSecondsInterval)
+			time.Sleep(reconnectSecondsInterval * time.Second)
 		} else {
-      log.Println("connected to database")
+			log.Println("connected to database")
 			break
 		}
 	}
-
-	db.Logger = logger.Default.LogMode(logger.Info)
 
 	Db = Dbinstance{
 		Db: db,
