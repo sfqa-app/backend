@@ -1,20 +1,13 @@
 package routes
 
 import (
-	"fmt"
-
 	"github.com/gofiber/fiber/v2"
+	"github.com/sfqa-app/backend/handlers"
 )
 
 func SetUpRoutes(app *fiber.App) {
-  app.Get("/hello", helloWorld)
-  app.Get("/:user", helloUser)
-}
-
-func helloWorld(c *fiber.Ctx) error {
-	return c.SendString("Hello, World!\n")
-}
-
-func helloUser(c *fiber.Ctx) error {
-	return c.SendString(fmt.Sprintf("Hello, %v!\n", c.Params("user")))
+	app.Get("/user/:id", handlers.UserGet)
+	app.Put("/user", handlers.UserUpdate)
+	app.Post("/user", handlers.UserCreate)
+	app.Delete("/user", handlers.UserDelete)
 }

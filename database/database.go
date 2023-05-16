@@ -15,7 +15,7 @@ type Dbinstance struct {
 	Db *gorm.DB
 }
 
-var Db Dbinstance
+var DB Dbinstance
 
 func ConnectDb() {
 	log.Println("connecting to database...")
@@ -49,7 +49,7 @@ func ConnectDb() {
 		}
 	}
 
-	Db = Dbinstance{
+	DB = Dbinstance{
 		Db: db,
 	}
 }
