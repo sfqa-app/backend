@@ -15,19 +15,15 @@ var port string
 const defaultPort = "8080"
 
 func init() {
-	// load env variables from an .env file
-	err := godotenv.Load()
-	if err != nil {
+	if err := godotenv.Load(); err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
-	// load env variables
-	port = os.Getenv("PORT")
-	if port == "" {
+	if port = os.Getenv("PORT"); port == "" {
 		port = defaultPort
 	}
 
-  database.ConnectDb()
+	database.ConnectDb()
 }
 
 func main() {
@@ -35,8 +31,7 @@ func main() {
 
 	routes.SetUpRoutes(app)
 
-	err := app.Listen(":" + port)
-	if err != nil {
+	if err := app.Listen(":" + port); err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
 }
