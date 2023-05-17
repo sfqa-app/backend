@@ -2,15 +2,15 @@ package main
 
 import (
 	"github.com/sfqa-app/backend/database"
-	"github.com/sfqa-app/backend/initializers"
+	"github.com/sfqa-app/backend/config"
 	"github.com/sfqa-app/backend/models"
 )
 
 func init() {
-  initializers.LoadEnv()
+  config.LoadEnv()
 	database.ConnectDb()
 }
 
 func main() {
-	database.DB.Db.AutoMigrate(&models.User{})
+	database.DB.AutoMigrate(&models.User{})
 }

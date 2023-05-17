@@ -11,11 +11,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-type Dbinstance struct {
-	Db *gorm.DB
-}
-
-var DB Dbinstance
+var DB *gorm.DB
 
 func ConnectDb() {
 	log.Println("connecting to database...")
@@ -31,12 +27,11 @@ func ConnectDb() {
 		host, user, pass, name, port,
 	)
 
-	var db *gorm.DB
 	var err error
 	var reconnectSecondsInterval time.Duration = 5
 
 	for {
-		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
+		DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{
 			Logger: logger.Default.LogMode(logger.Info),
 		})
 
@@ -47,9 +42,5 @@ func ConnectDb() {
 			log.Println("connected to database")
 			break
 		}
-	}
-
-	DB = Dbinstance{
-		Db: db,
 	}
 }

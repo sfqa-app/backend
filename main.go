@@ -7,15 +7,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
 	"github.com/sfqa-app/backend/database"
-	"github.com/sfqa-app/backend/routes"
+	"github.com/sfqa-app/backend/router"
 )
 
 var port string
-
 const defaultPort = "8080"
 
 func init() {
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load(".env"); err != nil {
 		log.Fatal("Error loading .env file")
 	}
 
@@ -29,7 +28,7 @@ func init() {
 func main() {
 	app := fiber.New()
 
-	routes.SetUpRoutes(app)
+	router.SetUpRoutes(app)
 
 	if err := app.Listen(":" + port); err != nil {
 		log.Fatalf("Error starting server: %v", err)
