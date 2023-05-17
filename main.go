@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
 	"github.com/sfqa-app/backend/database"
 	"github.com/sfqa-app/backend/router"
@@ -27,6 +28,8 @@ func init() {
 
 func main() {
 	app := fiber.New()
+
+  app.Use(cors.New())
 
 	router.SetUpRoutes(app)
 
