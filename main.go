@@ -11,7 +11,22 @@ import (
 	"github.com/sfqa-app/backend/router"
 )
 
+//	@title			sfqa-app docs
+//	@version		1.0
+//	@description	sfqa-app api documentation
+//	@termsOfService	http://swagger.io/terms/
+
+//	@contact.name	API Support
+//	@contact.url	http://www.swagger.io/support
+//	@contact.email	support@swagger.io
+
+//	@license.name	GPL-3.0
+//	@license.url	https://www.gnu.org/licenses/gpl-3.0.en.html
+//	@host			localhost:8080
+//	@BasePath		/
+
 var port string
+
 const defaultPort = "8080"
 
 func init() {
@@ -29,7 +44,7 @@ func init() {
 func main() {
 	app := fiber.New()
 
-  app.Use(cors.New())
+	app.Use(cors.New())
 
 	router.SetUpRoutes(app)
 

@@ -6,6 +6,16 @@ import (
 	"github.com/sfqa-app/backend/models"
 )
 
+// UserGet get a user account
+//	@Summary		Get user
+//	@Description	Get user account
+//	@Tags			User
+//	@Accept			json
+//	@Produce		json
+//	@Param			id 	path		int	true	"User ID"
+//	@Success		200	{object}	models.User
+//	@Failure		400	{object}	error
+//	@Router			/user/{id} [get]
 func UserGet(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var user models.User
@@ -18,6 +28,16 @@ func UserGet(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(user)
 }
 
+// UserCreate creates a new user account
+//	@Summary		Create user
+//	@Description	Create new user account
+//	@Tags			User
+//	@Accept			json
+//	@Produce		json
+//	@Param			User 	body		models.UserInfo	true	"User info"
+//	@Success		200	{object}	models.User
+//	@Failure		400	{object}	error
+//	@Router			/user [post]
 func UserCreate(c *fiber.Ctx) error {
 	var user models.User
 
@@ -33,6 +53,16 @@ func UserCreate(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(user)
 }
 
+// UserDelete deletes a user account
+//	@Summary		Delete user
+//	@Description	Delete user account
+//	@Tags			User
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	models.User
+//	@Failure		400	{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/user [delete]
 func UserDelete(c *fiber.Ctx) error {
 	var user models.User
 
@@ -48,6 +78,18 @@ func UserDelete(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(user)
 }
 
+// UserUpdate updates a user account info
+//	@Summary		Update user account info
+//	@Description	Update user account info
+//	@Tags			User
+//	@Accept			json
+//	@Produce		json
+//	@Success		200	{object}	models.User
+//	@Failure		400	{object}	error
+//	@Param			id	path		int	true	"User ID"
+//	@Param			User	body		models.UserInfo	true	"User"
+//	@Security		ApiKeyAuth
+//	@Router			/user/{id} [put]
 func UserUpdate(c *fiber.Ctx) error {
 	var user models.User
 
