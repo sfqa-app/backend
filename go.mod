@@ -32,6 +32,7 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
+	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/gofiber/jwt/v2 v2.2.7
 	github.com/gofiber/swagger v0.1.11
 	github.com/google/uuid v1.3.0 // indirect

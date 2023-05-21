@@ -45,7 +45,14 @@ func UserCreate(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(err.Error())
 	}
 
-  user.EncryptPassword(user.Password)
+	if err := user.EncryptPassword(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(err.Error())
+	}
+
+	validEmail := user.IsValidEmail()
+	if !validEmail {
+		return c.Status(fiber.StatusBadRequest).JSON("email not valid")
+	}
 
 	if res := database.DB.Create(&user); res.Error != nil {
 		c.Status(fiber.StatusBadRequest)

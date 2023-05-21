@@ -1,6 +1,7 @@
 package models
 
 import (
+	valid "github.com/asaskevich/govalidator"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -14,8 +15,8 @@ type User struct {
 	Password string `json:"password" gorm:"not null;default:null"`
 }
 
-func (user *User) EncryptPassword(password string) error {
-	bytes := []byte(password)
+func (user *User) EncryptPassword() error {
+	bytes := []byte(user.Password)
 	hashedPassword, err := bcrypt.GenerateFromPassword(bytes, bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -29,4 +30,8 @@ func (user *User) EncryptPassword(password string) error {
 func (user *User) CheckPassword(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	return err == nil
+}
+
+func (user *User) IsValidEmail() bool {
+  return valid.IsEmail(user.Email)
 }
