@@ -4,8 +4,10 @@ import "gorm.io/gorm"
 
 //	@Description	User account info
 type UserInfo struct {
-	Name string `json:"name"`
-	Age  uint8  `json:"age"`
+	Name     string `json:"name"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 //	@Description	User account

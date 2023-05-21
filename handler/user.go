@@ -7,7 +7,7 @@ import (
 )
 
 // UserGet get a user account
-//	@Summary		Get user
+//	@Summary       Get user
 //	@Description	Get user account
 //	@Tags			User
 //	@Accept			json
