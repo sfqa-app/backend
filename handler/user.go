@@ -2,6 +2,7 @@ package handler
 
 import (
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -117,7 +118,6 @@ func UserUpdate(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(user)
 }
 
-
 func isValid(field string) bool {
 	return field != ""
 }
@@ -153,7 +153,7 @@ func UserLogin(c *fiber.Ctx) error {
 	expireDate := time.Now().Add(time.Hour * 7 * 24) // 7 days
 
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
-		Issuer:    input.Email,
+		Issuer:    strconv.Itoa(int(user.ID)),
 		ExpiresAt: expireDate.Unix(),
 	})
 
