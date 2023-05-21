@@ -1,7 +1,11 @@
 package handler
 
 import (
+	"os"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/sfqa-app/backend/database"
 	"github.com/sfqa-app/backend/models"
 )
@@ -49,8 +53,7 @@ func UserCreate(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(err.Error())
 	}
 
-	validEmail := user.IsValidEmail()
-	if !validEmail {
+	if validEmail := user.IsValidEmail(); !validEmail {
 		return c.Status(fiber.StatusBadRequest).JSON("email not valid")
 	}
 
@@ -112,4 +115,62 @@ func UserUpdate(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(user)
+}
+
+
+func isValid(field string) bool {
+	return field != ""
+}
+
+// Login get user and password
+func UserLogin(c *fiber.Ctx) error {
+	type LoginInput struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	var input LoginInput
+	if err := c.BodyParser(&input); err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	if !isValid(input.Password) || !isValid(input.Email) {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	var user models.User
+	if res := database.DB.Where("email = ?", input.Email).First(&user); res.Error != nil {
+		c.Status(fiber.StatusNotFound)
+		return res.Error
+	}
+
+	if !user.IsPasswordMatch(input.Password) {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"message": "wrong password",
+		})
+	}
+
+	expireDate := time.Now().Add(time.Hour * 7 * 24) // 7 days
+
+	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
+		Issuer:    input.Email,
+		ExpiresAt: expireDate.Unix(),
+	})
+
+	secret := os.Getenv("JWT_SECRET")
+	token, err := claims.SignedString([]byte(secret))
+	if err != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	cookie := fiber.Cookie{
+		Name:     "jwt",
+		Value:    token,
+		Expires:  expireDate,
+		HTTPOnly: true,
+	}
+
+	c.Cookie(&cookie)
+
+	return c.SendStatus(fiber.StatusOK)
 }

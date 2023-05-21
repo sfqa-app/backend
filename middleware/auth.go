@@ -10,9 +10,11 @@ import (
 // Protected protect routes
 func Protected() func(*fiber.Ctx) error {
 	secret := os.Getenv("JWT_SECRET")
+
 	return jwtware.New(jwtware.Config{
 		SigningKey:   []byte(secret),
 		ErrorHandler: jwtError,
+    TokenLookup: "cookie:jwt",
 	})
 }
 

@@ -16,7 +16,7 @@ func SetUpRoutes(app *fiber.App) {
   }))
 
 	// auth
-	app.Post("/login", handler.Login)
+	app.Post("/login", handler.UserLogin)
 
 	// user routes
 	user := app.Group("/user")
