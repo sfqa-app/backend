@@ -45,6 +45,8 @@ func UserCreate(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(err.Error())
 	}
 
+  user.EncryptPassword(user.Password)
+
 	if res := database.DB.Create(&user); res.Error != nil {
 		c.Status(fiber.StatusBadRequest)
 		return res.Error
