@@ -46,10 +46,12 @@ func main() {
 
 	app.Use(
 		cors.New(cors.Config{
-			AllowCredentials: true}),
-		// encryptcookie.New(encryptcookie.Config{
-		// 	Key: os.Getenv("COOKIE_SECRET"),
-		)
+			AllowCredentials: true,
+			AllowOriginsFunc: func(origin string) bool {
+				return os.Getenv("ENVIRONMENT") == "development"
+			},
+			AllowHeaders: "Origin, Content-Type, Accept",
+		}))
 
 	router.SetUpRoutes(app)
 

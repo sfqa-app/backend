@@ -44,10 +44,15 @@ func UserGet(c *fiber.Ctx) error {
 //	@Failure		400	{object}	error
 //	@Router			/user [post]
 func UserCreate(c *fiber.Ctx) error {
-	var user models.User
+	var data map[string]string
 
-	if err := c.BodyParser(&user); err != nil {
+	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(err.Error())
+	}
+
+	user := models.User{
+		Email:    data["email"],
+		Password: data["password"],
 	}
 
 	if err := user.EncryptPassword(); err != nil {
