@@ -12,6 +12,7 @@ import (
 )
 
 // UserGet get a user account
+//
 //	@Summary       Get user
 //	@Description	Get user account
 //	@Tags			User
@@ -34,6 +35,7 @@ func UserGet(c *fiber.Ctx) error {
 }
 
 // UserCreate creates a new user account
+//
 //	@Summary		Create user
 //	@Description	Create new user account
 //	@Tags			User
@@ -72,6 +74,7 @@ func UserCreate(c *fiber.Ctx) error {
 }
 
 // UserDelete deletes a user account
+//
 //	@Summary		Delete user
 //	@Description	Delete user account
 //	@Tags			User
@@ -97,6 +100,7 @@ func UserDelete(c *fiber.Ctx) error {
 }
 
 // UserUpdate updates a user account info
+//
 //	@Summary		Update user account info
 //	@Description	Update user account info
 //	@Tags			User
@@ -178,4 +182,9 @@ func UserLogin(c *fiber.Ctx) error {
 	c.Cookie(&cookie)
 
 	return c.SendStatus(fiber.StatusOK)
+}
+
+func UserLogout(c *fiber.Ctx) error {
+	c.ClearCookie()
+	return nil
 }
