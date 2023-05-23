@@ -9,12 +9,11 @@ import (
 // @Description	User account
 type User struct {
 	gorm.Model
-	Name       string `json:"name"`
-	Username   string `json:"username" gorm:"unique"`
-	Email      string `json:"email" gorm:"unique; not null;default:null"`
-	Password   string `json:"-" gorm:"not null;default:null"`
-	Verified   bool   `json:"verified" gorm:"default:false"`
-	VerifyCode int    `json:"verifycode"`
+	Name            string `json:"name"`
+  Username        string `json:"username" gorm:"unique;default:null"`
+	Email           string `json:"email" gorm:"unique; not null;default:null"`
+	Password        string `json:"-" gorm:"not null;default:null"`
+	IsEmailVerified bool   `json:"is_email_verified" gorm:"default:false"`
 }
 
 func NewUser(email, password string) *User {

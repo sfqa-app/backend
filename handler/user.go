@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"time"
@@ -48,25 +50,79 @@ func UserGet(c *fiber.Ctx) error {
 func UserCreate(c *fiber.Ctx) error {
 	var data map[string]string
 
+	// parse request body
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
 	}
 
+	// create new user
 	user := models.NewUser(data["email"], data["password"])
 
-	if err := user.EncryptPassword(); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON("failed to encrypt password")
-	}
-
+	// validate email
 	if validEmail := user.IsValidEmail(); !validEmail {
 		return c.Status(fiber.StatusBadRequest).JSON("email not valid")
 	}
 
-	if res := database.DB.Create(user); res.Error != nil {
-		return c.Status(fiber.StatusBadRequest).JSON("failed to create user")
+	// check if email already exists and verified
+	if res := database.DB.Where("email = ?", user.Email).First(&user); res.Error == nil {
+		if user.IsEmailVerified {
+			return c.Status(fiber.StatusBadRequest).JSON("email already exists and verified")
+		}
+	} else {
+		// encrypt password
+		if err := user.EncryptPassword(); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON("failed to encrypt password")
+		}
+
+		// create user
+		if res := database.DB.Create(user); res.Error != nil {
+			log.Println(res.Error)
+			return c.Status(fiber.StatusBadRequest).JSON("failed to create user")
+		}
+	}
+
+	// send email verification link
+	if err := SendEmailVerificationCode(user); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON("failed to send email verification link")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(user)
+}
+
+func SendEmailVerificationCode(user *models.User) error {
+	// get jwt secret from env
+	secret := os.Getenv("JWT_SECRET")
+
+	// generate jwt token with user id
+	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
+		Issuer:    strconv.Itoa(int(user.ID)),
+		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+	})
+
+	// sign jwt token
+	token, err := claims.SignedString([]byte(secret))
+	if err != nil {
+		return err
+	}
+
+	emailTemplate := `Subject: Verify Your Email Address
+Thank you for signing up for SFQA App! We're excited to have you on board.
+
+Please click on the link below to confirm your email address:
+
+%s
+
+If you did not sign up for SFQA App, please disregard this message and do not click the link above.
+
+Thank you,
+
+SFQA App Team
+`
+
+	domain := os.Getenv("DOMAIN")
+	emailBody := fmt.Sprintf(emailTemplate, domain+"/verify-email?token="+token)
+
+	return SendEmail(emailBody, user.Email)
 }
 
 // UserDelete deletes a user account
@@ -144,6 +200,10 @@ func UserLogin(c *fiber.Ctx) error {
 	var user models.User
 	if res := database.DB.Where("email = ?", input.Email).First(&user); res.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON("email not found")
+	}
+
+	if !user.IsEmailVerified {
+		return c.Status(fiber.StatusBadRequest).JSON("email not verified")
 	}
 
 	if !user.IsPasswordMatch(input.Password) {
