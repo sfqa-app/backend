@@ -6,13 +6,22 @@ import (
 	"gorm.io/gorm"
 )
 
-//	@Description	User account
+// @Description	User account
 type User struct {
 	gorm.Model
-	Name     string `json:"name"`
-	Username string `json:"username" gorm:"unique"`
-	Email    string `json:"email" gorm:"unique; not null;default:null"`
-	Password string `json:"-" gorm:"not null;default:null"`
+	Name       string `json:"name"`
+	Username   string `json:"username" gorm:"unique"`
+	Email      string `json:"email" gorm:"unique; not null;default:null"`
+	Password   string `json:"-" gorm:"not null;default:null"`
+	Verified   bool   `json:"verified" gorm:"default:false"`
+	VerifyCode int    `json:"verifycode"`
+}
+
+func NewUser(email, password string) *User {
+	return &User{
+		Email:    email,
+		Password: password,
+	}
 }
 
 func (user *User) EncryptPassword() error {

@@ -49,25 +49,21 @@ func UserCreate(c *fiber.Ctx) error {
 	var data map[string]string
 
 	if err := c.BodyParser(&data); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(err.Error())
+		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
 	}
 
-	user := models.User{
-		Email:    data["email"],
-		Password: data["password"],
-	}
+	user := models.NewUser(data["email"], data["password"])
 
 	if err := user.EncryptPassword(); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(err.Error())
+		return c.Status(fiber.StatusBadRequest).JSON("failed to encrypt password")
 	}
 
 	if validEmail := user.IsValidEmail(); !validEmail {
 		return c.Status(fiber.StatusBadRequest).JSON("email not valid")
 	}
 
-	if res := database.DB.Create(&user); res.Error != nil {
-		c.Status(fiber.StatusBadRequest)
-		return res.Error
+	if res := database.DB.Create(user); res.Error != nil {
+		return c.Status(fiber.StatusBadRequest).JSON("failed to create user")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(user)
@@ -88,12 +84,11 @@ func UserDelete(c *fiber.Ctx) error {
 	var user models.User
 
 	if err := c.BodyParser(&user); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(err.Error())
+		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
 	}
 
 	if res := database.DB.Delete(&user, user.ID); res.Error != nil {
-		c.Status(fiber.StatusBadRequest)
-		return res.Error
+		return c.Status(fiber.StatusBadRequest).JSON("failed to delete user")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(user)
@@ -116,12 +111,11 @@ func UserUpdate(c *fiber.Ctx) error {
 	var user models.User
 
 	if err := c.BodyParser(&user); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(err.Error())
+		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
 	}
 
 	if res := database.DB.Model(&user).Updates(&user); res.Error != nil {
-		c.Status(fiber.StatusBadRequest)
-		return res.Error
+		return c.Status(fiber.StatusBadRequest).JSON("failed to update user")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(user)
@@ -140,17 +134,16 @@ func UserLogin(c *fiber.Ctx) error {
 
 	var input LoginInput
 	if err := c.BodyParser(&input); err != nil {
-		return c.SendStatus(fiber.StatusBadRequest)
+		return c.Status(fiber.StatusBadRequest).JSON("failed to parse login data")
 	}
 
 	if !isValid(input.Password) || !isValid(input.Email) {
-		return c.SendStatus(fiber.StatusBadRequest)
+		return c.Status(fiber.StatusBadRequest).JSON("invalid email or password")
 	}
 
 	var user models.User
 	if res := database.DB.Where("email = ?", input.Email).First(&user); res.Error != nil {
-		c.Status(fiber.StatusNotFound)
-		return res.Error
+		return c.Status(fiber.StatusNotFound).JSON("email not found")
 	}
 
 	if !user.IsPasswordMatch(input.Password) {
@@ -186,5 +179,5 @@ func UserLogin(c *fiber.Ctx) error {
 
 func UserLogout(c *fiber.Ctx) error {
 	c.ClearCookie()
-	return nil
+	return c.SendStatus(fiber.StatusOK)
 }
