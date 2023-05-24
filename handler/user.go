@@ -168,6 +168,7 @@ func UserUpdate(c *fiber.Ctx) error {
     return c.Status(fiber.StatusUnauthorized).JSON(err.Error())
   }
 
+  // update user
 	if res := database.DB.Model(&user).Updates(&user); res.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to update user")
 	}
@@ -175,35 +176,43 @@ func UserUpdate(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(user)
 }
 
+// field is valid if it is not empty
 func isValid(field string) bool {
 	return field != ""
 }
 
 // Login get user and password
 func UserLogin(c *fiber.Ctx) error {
+  // login input struct
 	type LoginInput struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
 	var input LoginInput
+
+  // parse request body
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to parse login data")
 	}
 
+  // validate email and password
 	if !isValid(input.Password) || !isValid(input.Email) {
 		return c.Status(fiber.StatusBadRequest).JSON("invalid email or password")
 	}
 
 	var user models.User
+  // get user by email
 	if res := database.DB.Where("email = ?", input.Email).First(&user); res.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON("email not found")
 	}
 
+  // check if email is verified
 	if !user.IsEmailVerified {
 		return c.Status(fiber.StatusBadRequest).JSON("email not verified")
 	}
 
+  // check if password is correct
 	if !user.IsPasswordMatch(input.Password) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "wrong password",
@@ -212,17 +221,20 @@ func UserLogin(c *fiber.Ctx) error {
 
 	expireDate := time.Now().Add(time.Hour * 7 * 24) // 7 days
 
+  // generate jwt token
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		Issuer:    strconv.Itoa(int(user.ID)),
 		ExpiresAt: expireDate.Unix(),
 	})
 
+  // sign jwt token
 	secret := os.Getenv("JWT_SECRET")
 	token, err := claims.SignedString([]byte(secret))
 	if err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
+  // set jwt token to cookie
 	cookie := fiber.Cookie{
 		Name:     "jwt",
 		Value:    token,
@@ -235,7 +247,9 @@ func UserLogin(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
+// UserLogout logout user
 func UserLogout(c *fiber.Ctx) error {
+  // clear jwt token from cookie
 	c.ClearCookie()
 	return c.SendStatus(fiber.StatusOK)
 }
@@ -244,6 +258,7 @@ func UserLogout(c *fiber.Ctx) error {
 func ParseJwtToken(c *fiber.Ctx, token string) (*jwt.StandardClaims, error) {
 	secret := os.Getenv("JWT_SECRET")
 
+  // parse jwt token
 	t, err := jwt.ParseWithClaims(token, &jwt.StandardClaims{}, func(t *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	})
@@ -251,6 +266,7 @@ func ParseJwtToken(c *fiber.Ctx, token string) (*jwt.StandardClaims, error) {
 		return nil, errors.New("error parsing token")
 	}
 
+  // check if jwt token is valid
 	claims, ok := t.Claims.(*jwt.StandardClaims)
 	if !ok || !t.Valid || claims.ExpiresAt < time.Now().Unix() {
 		return nil, errors.New("invalid token")

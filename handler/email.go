@@ -11,6 +11,7 @@ import (
 	"github.com/sfqa-app/backend/models"
 )
 
+// return verification email message body with token
 func NewVerificationEmailMessage(to, token string) (msg string) {
 	domain := os.Getenv("DOMAIN")
 	from := os.Getenv("SMTP_EMAIL")
@@ -37,40 +38,55 @@ SFQA App Team
 }
 
 func EmailSend(msg, to string) error {
+  // get email credentials from env
 	from := os.Getenv("SMTP_EMAIL")
 	pass := os.Getenv("SMTP_PASSWORD")
 	host := os.Getenv("SMTP_HOST")
 	port := os.Getenv("SMTP_PORT")
+
+  // authenticate to smtp server
 	auth := smtp.PlainAuth("", from, pass, host)
 
+  // send email
 	err := smtp.SendMail(host+":"+port, auth, from, []string{to}, []byte(msg))
 	if err != nil {
 		return errors.New("error sending email")
 	}
+
 	return nil
 }
 
 func EmailVerify(c *fiber.Ctx) error {
+  // get token from url params
 	t := c.Params("token")
 
+  // parse token
   claims, err := ParseJwtToken(c, t)
   if err != nil {
     return c.Status(fiber.StatusBadRequest).JSON(err.Error())
   }
 
+  // parse userID from token
 	userID := claims.Issuer
 
 	var user models.User
 
+  // get user from db
 	if res := database.DB.First(&user, userID); res.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("user not found")
 	}
 
+  // set user email verified to true
 	user.IsEmailVerified = true
 
+  // save user to db
 	if res := database.DB.Save(&user); res.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("error verifying email")
 	}
 
-	return c.Status(fiber.StatusOK).JSON("email verified")
+  // get domain from env
+	domain := os.Getenv("DOMAIN")
+
+  // redirect to frontend
+  return c.Redirect(domain, fiber.StatusTemporaryRedirect)
 }
