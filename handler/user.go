@@ -120,9 +120,9 @@ SFQA App Team
 `
 
 	domain := os.Getenv("DOMAIN")
-	emailBody := fmt.Sprintf(emailTemplate, domain+"/verify-email?token="+token)
+	emailBody := fmt.Sprintf(emailTemplate, domain+"/verify/"+token)
 
-	return SendEmail(emailBody, user.Email)
+	return EmailSend(emailBody, user.Email)
 }
 
 // UserDelete deletes a user account

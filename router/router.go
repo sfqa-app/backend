@@ -18,6 +18,7 @@ func SetUpRoutes(app *fiber.App) {
 	// auth
 	app.Post("/login", handler.UserLogin)
 	app.Get("/logout", handler.UserLogout)
+  app.Get("/verify/:token", handler.EmailVerify)
 
 	// user routes
 	user := app.Group("/user")
