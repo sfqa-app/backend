@@ -105,7 +105,11 @@ func SendEmailVerificationCode(user *models.User) error {
 		return err
 	}
 
-	emailTemplate := `Subject: Verify Your Email Address
+	domain := os.Getenv("DOMAIN")
+	from := os.Getenv("SMTP_EMAIL")
+	emailBody := fmt.Sprintf(`From: SFQA App <%s>
+To: %s
+Subject: Verify Your Email Address
 Thank you for signing up for SFQA App! We're excited to have you on board.
 
 Please click on the link below to confirm your email address:
@@ -117,10 +121,11 @@ If you did not sign up for SFQA App, please disregard this message and do not cl
 Thank you,
 
 SFQA App Team
-`
-
-	domain := os.Getenv("DOMAIN")
-	emailBody := fmt.Sprintf(emailTemplate, domain+"/verify/"+token)
+`,
+		from,
+		user.Email,
+		domain+"/verify/"+token,
+	)
 
 	return EmailSend(emailBody, user.Email)
 }
@@ -142,7 +147,7 @@ func UserDelete(c *fiber.Ctx) error {
 	if err := c.BodyParser(&user); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
 	}
-
+  // FIXME: user should not be able to delete other users
 	if res := database.DB.Delete(&user, user.ID); res.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to delete user")
 	}
@@ -169,7 +174,7 @@ func UserUpdate(c *fiber.Ctx) error {
 	if err := c.BodyParser(&user); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
 	}
-
+  // FIXME: user should not be able to update other users
 	if res := database.DB.Model(&user).Updates(&user); res.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to update user")
 	}
