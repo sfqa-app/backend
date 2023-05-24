@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"fmt"
+	"errors"
 	"log"
 	"os"
 	"strconv"
@@ -82,14 +82,14 @@ func UserCreate(c *fiber.Ctx) error {
 	}
 
 	// send email verification link
-	if err := SendEmailVerificationCode(user); err != nil {
+	if err := SendEmailVerificationLink(user); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to send email verification link")
 	}
 
 	return c.Status(fiber.StatusOK).JSON(user)
 }
 
-func SendEmailVerificationCode(user *models.User) error {
+func SendEmailVerificationLink(user *models.User) error {
 	// get jwt secret from env
 	secret := os.Getenv("JWT_SECRET")
 
@@ -105,29 +105,9 @@ func SendEmailVerificationCode(user *models.User) error {
 		return err
 	}
 
-	domain := os.Getenv("DOMAIN")
-	from := os.Getenv("SMTP_EMAIL")
-	emailBody := fmt.Sprintf(`From: SFQA App <%s>
-To: %s
-Subject: Verify Your Email Address
-Thank you for signing up for SFQA App! We're excited to have you on board.
+	msg := NewVerificationEmailMessage(user.Email, token)
 
-Please click on the link below to confirm your email address:
-
-%s
-
-If you did not sign up for SFQA App, please disregard this message and do not click the link above.
-
-Thank you,
-
-SFQA App Team
-`,
-		from,
-		user.Email,
-		domain+"/verify/"+token,
-	)
-
-	return EmailSend(emailBody, user.Email)
+	return EmailSend(msg, user.Email)
 }
 
 // UserDelete deletes a user account
@@ -144,14 +124,22 @@ SFQA App Team
 func UserDelete(c *fiber.Ctx) error {
 	var user models.User
 
-	if err := c.BodyParser(&user); err != nil {
+  // parse request body
+  if err := c.BodyParser(&user); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
 	}
-  // FIXME: user should not be able to delete other users
+
+  // user is not allowed to delete other user's account
+  if err := UserMe(c, &user); err != nil {
+    return c.Status(fiber.StatusUnauthorized).JSON(err.Error())
+  }
+
+  // delete user
 	if res := database.DB.Delete(&user, user.ID); res.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to delete user")
 	}
 
+  // delete user's email verification token
 	return c.Status(fiber.StatusOK).JSON(user)
 }
 
@@ -171,10 +159,15 @@ func UserDelete(c *fiber.Ctx) error {
 func UserUpdate(c *fiber.Ctx) error {
 	var user models.User
 
+  // parse request body
 	if err := c.BodyParser(&user); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
 	}
-  // FIXME: user should not be able to update other users
+
+  if err := UserMe(c, &user); err != nil {
+    return c.Status(fiber.StatusUnauthorized).JSON(err.Error())
+  }
+
 	if res := database.DB.Model(&user).Updates(&user); res.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to update user")
 	}
@@ -245,4 +238,44 @@ func UserLogin(c *fiber.Ctx) error {
 func UserLogout(c *fiber.Ctx) error {
 	c.ClearCookie()
 	return c.SendStatus(fiber.StatusOK)
+}
+
+// parse jwt token and return standard claims
+func ParseJwtToken(c *fiber.Ctx, token string) (*jwt.StandardClaims, error) {
+	secret := os.Getenv("JWT_SECRET")
+
+	t, err := jwt.ParseWithClaims(token, &jwt.StandardClaims{}, func(t *jwt.Token) (interface{}, error) {
+		return []byte(secret), nil
+	})
+	if err != nil {
+		return nil, errors.New("error parsing token")
+	}
+
+	claims, ok := t.Claims.(*jwt.StandardClaims)
+	if !ok || !t.Valid || claims.ExpiresAt < time.Now().Unix() {
+		return nil, errors.New("invalid token")
+	}
+
+	return claims, nil
+}
+
+// user is not allowed to mess with other user's account
+func UserMe(c *fiber.Ctx, user *models.User) error {
+  claims, err := ParseJwtToken(c, c.Cookies("jwt"))
+  if err != nil {
+    return errors.New("invalid token")
+  }
+
+  // parse user id from jwt token
+  userID, err := strconv.Atoi(claims.Issuer)
+  if err != nil {
+    return errors.New("invalid user id")
+  }
+
+  // check if user id in jwt token matches user id in request body
+  if user.ID != uint(userID) {
+    return errors.New("unauthorized")
+  }
+
+  return nil
 }

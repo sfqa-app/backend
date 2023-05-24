@@ -2,17 +2,41 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/smtp"
 	"os"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt/v4"
 	"github.com/sfqa-app/backend/database"
 	"github.com/sfqa-app/backend/models"
 )
 
-func EmailSend(msg string, to string) error {
+func NewVerificationEmailMessage(to, token string) (msg string) {
+	domain := os.Getenv("DOMAIN")
+	from := os.Getenv("SMTP_EMAIL")
+
+	return fmt.Sprintf(`From: SFQA App <%s>
+To: %s
+Subject: Verify Your Email Address
+Thank you for signing up for SFQA App! We're excited to have you on board.
+
+Please click on the link below to confirm your email address:
+
+%s
+
+If you did not sign up for SFQA App, please disregard this message and do not click the link above.
+
+Thank you,
+
+SFQA App Team
+`,
+		from,
+		to,
+		domain+"/verify/"+token,
+	)
+}
+
+func EmailSend(msg, to string) error {
 	from := os.Getenv("SMTP_EMAIL")
 	pass := os.Getenv("SMTP_PASSWORD")
 	host := os.Getenv("SMTP_HOST")
@@ -28,19 +52,11 @@ func EmailSend(msg string, to string) error {
 
 func EmailVerify(c *fiber.Ctx) error {
 	t := c.Params("token")
-	token, err := jwt.ParseWithClaims(t, &jwt.StandardClaims{}, func(t *jwt.Token) (interface{}, error) {
-		secret := os.Getenv("JWT_SECRET")
-		return []byte(secret), nil
-	})
 
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON("error parsing token")
-	}
-
-	claims, ok := token.Claims.(*jwt.StandardClaims)
-	if !ok || !token.Valid || claims.ExpiresAt < time.Now().Unix() {
-		return c.Status(fiber.StatusBadRequest).JSON("not valid token")
-	}
+  claims, err := ParseJwtToken(c, t)
+  if err != nil {
+    return c.Status(fiber.StatusBadRequest).JSON(err.Error())
+  }
 
 	userID := claims.Issuer
 
