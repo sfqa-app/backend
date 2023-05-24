@@ -50,38 +50,31 @@ func UserGet(c *fiber.Ctx) error {
 func UserCreate(c *fiber.Ctx) error {
 	var data map[string]string
 
-	// parse request body
 	if err := c.BodyParser(&data); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
 	}
 
-	// create new user
 	user := models.NewUser(data["email"], data["password"])
 
-	// validate email
 	if validEmail := user.IsValidEmail(); !validEmail {
 		return c.Status(fiber.StatusBadRequest).JSON("email not valid")
 	}
 
-	// check if email already exists and verified
 	if res := database.DB.Where("email = ?", user.Email).First(&user); res.Error == nil {
 		if user.IsEmailVerified {
 			return c.Status(fiber.StatusBadRequest).JSON("email already exists and verified")
 		}
 	} else {
-		// encrypt password
 		if err := user.EncryptPassword(); err != nil {
 			return c.Status(fiber.StatusBadRequest).JSON("failed to encrypt password")
 		}
 
-		// create user
 		if res := database.DB.Create(user); res.Error != nil {
 			log.Println(res.Error)
 			return c.Status(fiber.StatusBadRequest).JSON("failed to create user")
 		}
 	}
 
-	// send email verification link
 	if err := SendEmailVerificationLink(user); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to send email verification link")
 	}
@@ -90,16 +83,13 @@ func UserCreate(c *fiber.Ctx) error {
 }
 
 func SendEmailVerificationLink(user *models.User) error {
-	// get jwt secret from env
 	secret := os.Getenv("JWT_SECRET")
 
-	// generate jwt token with user id
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		Issuer:    strconv.Itoa(int(user.ID)),
 		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
 	})
 
-	// sign jwt token
 	token, err := claims.SignedString([]byte(secret))
 	if err != nil {
 		return err
@@ -124,22 +114,18 @@ func SendEmailVerificationLink(user *models.User) error {
 func UserDelete(c *fiber.Ctx) error {
 	var user models.User
 
-  // parse request body
   if err := c.BodyParser(&user); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
 	}
 
-  // user is not allowed to delete other user's account
   if err := UserMe(c, &user); err != nil {
     return c.Status(fiber.StatusUnauthorized).JSON(err.Error())
   }
 
-  // delete user
 	if res := database.DB.Delete(&user, user.ID); res.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to delete user")
 	}
 
-  // delete user's email verification token
 	return c.Status(fiber.StatusOK).JSON(user)
 }
 
@@ -159,7 +145,6 @@ func UserDelete(c *fiber.Ctx) error {
 func UserUpdate(c *fiber.Ctx) error {
 	var user models.User
 
-  // parse request body
 	if err := c.BodyParser(&user); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
 	}
@@ -168,7 +153,6 @@ func UserUpdate(c *fiber.Ctx) error {
     return c.Status(fiber.StatusUnauthorized).JSON(err.Error())
   }
 
-  // update user
 	if res := database.DB.Model(&user).Updates(&user); res.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to update user")
 	}
@@ -183,7 +167,6 @@ func isValid(field string) bool {
 
 // Login get user and password
 func UserLogin(c *fiber.Ctx) error {
-  // login input struct
 	type LoginInput struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -191,28 +174,23 @@ func UserLogin(c *fiber.Ctx) error {
 
 	var input LoginInput
 
-  // parse request body
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to parse login data")
 	}
 
-  // validate email and password
 	if !isValid(input.Password) || !isValid(input.Email) {
 		return c.Status(fiber.StatusBadRequest).JSON("invalid email or password")
 	}
 
 	var user models.User
-  // get user by email
 	if res := database.DB.Where("email = ?", input.Email).First(&user); res.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON("email not found")
 	}
 
-  // check if email is verified
 	if !user.IsEmailVerified {
 		return c.Status(fiber.StatusBadRequest).JSON("email not verified")
 	}
 
-  // check if password is correct
 	if !user.IsPasswordMatch(input.Password) {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"message": "wrong password",
@@ -221,20 +199,17 @@ func UserLogin(c *fiber.Ctx) error {
 
 	expireDate := time.Now().Add(time.Hour * 7 * 24) // 7 days
 
-  // generate jwt token
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		Issuer:    strconv.Itoa(int(user.ID)),
 		ExpiresAt: expireDate.Unix(),
 	})
 
-  // sign jwt token
 	secret := os.Getenv("JWT_SECRET")
 	token, err := claims.SignedString([]byte(secret))
 	if err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-  // set jwt token to cookie
 	cookie := fiber.Cookie{
 		Name:     "jwt",
 		Value:    token,
@@ -249,7 +224,6 @@ func UserLogin(c *fiber.Ctx) error {
 
 // UserLogout logout user
 func UserLogout(c *fiber.Ctx) error {
-  // clear jwt token from cookie
 	c.ClearCookie()
 	return c.SendStatus(fiber.StatusOK)
 }
@@ -258,7 +232,6 @@ func UserLogout(c *fiber.Ctx) error {
 func ParseJwtToken(c *fiber.Ctx, token string) (*jwt.StandardClaims, error) {
 	secret := os.Getenv("JWT_SECRET")
 
-  // parse jwt token
 	t, err := jwt.ParseWithClaims(token, &jwt.StandardClaims{}, func(t *jwt.Token) (interface{}, error) {
 		return []byte(secret), nil
 	})
@@ -266,7 +239,6 @@ func ParseJwtToken(c *fiber.Ctx, token string) (*jwt.StandardClaims, error) {
 		return nil, errors.New("error parsing token")
 	}
 
-  // check if jwt token is valid
 	claims, ok := t.Claims.(*jwt.StandardClaims)
 	if !ok || !t.Valid || claims.ExpiresAt < time.Now().Unix() {
 		return nil, errors.New("invalid token")
@@ -282,13 +254,11 @@ func UserMe(c *fiber.Ctx, user *models.User) error {
     return errors.New("invalid token")
   }
 
-  // parse user id from jwt token
   userID, err := strconv.Atoi(claims.Issuer)
   if err != nil {
     return errors.New("invalid user id")
   }
 
-  // check if user id in jwt token matches user id in request body
   if user.ID != uint(userID) {
     return errors.New("unauthorized")
   }

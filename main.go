@@ -48,7 +48,7 @@ func main() {
 		cors.New(cors.Config{
 			AllowCredentials: true,
 			AllowOriginsFunc: func(origin string) bool {
-				return os.Getenv("ENVIRONMENT") == "development"
+				return os.Getenv("ENV") == "development"
 			},
 			AllowHeaders: "Origin, Content-Type, Accept",
 		}))
