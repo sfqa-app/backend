@@ -61,7 +61,7 @@ func UserCreate(c *fiber.Ctx) error {
 	}
 
 	if res := database.DB.Where("email = ?", user.Email).First(&user); res.Error == nil {
-		if user.IsEmailVerified {
+		if user.EmailVerified {
 			return c.Status(fiber.StatusBadRequest).JSON("email already exists and verified")
 		}
 	} else {
@@ -187,7 +187,7 @@ func UserLogin(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON("email not found")
 	}
 
-	if !user.IsEmailVerified {
+	if !user.EmailVerified {
 		return c.Status(fiber.StatusBadRequest).JSON("email not verified")
 	}
 

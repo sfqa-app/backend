@@ -12,13 +12,16 @@ func SetUpRoutes(app *fiber.App) {
 	// swagger
 	app.Get("/docs/*", swagger.HandlerDefault)
 
-	app.Get("/docs/*", swagger.New(swagger.Config{
-  }))
+	app.Get("/docs/*", swagger.New(swagger.Config{}))
 
 	// auth
 	app.Post("/login", handler.UserLogin)
 	app.Get("/logout", handler.UserLogout)
-  app.Get("/verify/:token", handler.EmailVerify)
+	app.Get("/verify/:token", handler.EmailVerify)
+
+	// Google
+	app.Get("/auth/google/login", handler.GoogleLogin)
+	app.Get("/auth/google/callback", handler.GoogleCallback)
 
 	// user routes
 	user := app.Group("/user")

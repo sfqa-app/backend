@@ -13,7 +13,7 @@ type User struct {
 	Username        string `json:"username" gorm:"unique;default:null"`
 	Email           string `json:"email" gorm:"unique; not null;default:null"`
 	Password        string `json:"-" gorm:"not null;default:null"`
-	IsEmailVerified bool   `json:"is_email_verified" gorm:"default:false"`
+	EmailVerified bool   `json:"email_verified" gorm:"default:false"`
 }
 
 func NewUser(email, password string) *User {

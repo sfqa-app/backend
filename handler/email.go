@@ -69,7 +69,7 @@ func EmailVerify(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON("user not found")
 	}
 
-	user.IsEmailVerified = true
+	user.EmailVerified = true
 
 	if res := database.DB.Save(&user); res.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("error verifying email")
