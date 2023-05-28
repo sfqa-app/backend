@@ -60,22 +60,24 @@ func UserCreate(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON("email not valid")
 	}
 
-	if res := database.DB.Where("email = ?", user.Email).First(&user); res.Error == nil {
-		if user.EmailVerified {
-			return c.Status(fiber.StatusBadRequest).JSON("email already exists and verified")
-		}
-	} else {
-		if err := user.EncryptPassword(); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON("failed to encrypt password")
-		}
-
-		if res := database.DB.Create(user); res.Error != nil {
-			log.Println(res.Error)
-			return c.Status(fiber.StatusBadRequest).JSON("failed to create user")
-		}
+  res := database.DB.Where("email = ?", user.Email).First(&user, user.Email)
+	if res.Error != nil {
+    return c.Status(fiber.StatusBadRequest).JSON("failed to find user")
 	}
 
-	if err := SendEmailVerificationLink(user); err != nil {
+	if user.EmailVerified {
+		return c.Status(fiber.StatusBadRequest).JSON("email already exists and verified")
+	}
+
+	if err := user.EncryptPassword(); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON("failed to encrypt password")
+	}
+
+	if res := database.DB.Create(user); res.Error != nil {
+		return c.Status(fiber.StatusBadRequest).JSON("failed to create user")
+	}
+
+	if err := sendEmailVerificationLink(user); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to send email verification link")
 	}
 
