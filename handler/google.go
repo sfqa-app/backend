@@ -1,12 +1,14 @@
 package handler
 
 import (
+	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/sfqa-app/backend/database"
+	"github.com/sfqa-app/backend/models"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 )
@@ -44,14 +46,32 @@ func GoogleCallback(c *fiber.Ctx) error {
 
   userInfo, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
   if err != nil {
-    return err
+    return c.Status(fiber.StatusBadRequest).JSON("invalid token")
   }
 
   userData, err := ioutil.ReadAll(userInfo.Body)
   if err != nil {
-    return err
+    return c.Status(fiber.StatusBadRequest).JSON("invalid token")
+  }
+  
+  var GoogleUser models.GoogleUserData
+
+  err = json.Unmarshal(userData, &GoogleUser)
+  if err != nil {
+    return c.Status(fiber.StatusBadRequest).JSON("invalid token")
   }
 
-	log.Printf("User Info: %#v\n", string(userData))
-	return c.Status(http.StatusOK).JSON(userData)
+  user := &models.User{
+    Email: GoogleUser.Email,
+    Name: GoogleUser.Name,
+    Picture: GoogleUser.Picture,
+    LoginMethod: "google",
+    EmailVerified: true,
+  }
+
+  if res := database.DB.Create(&user); res.Error != nil {
+    return c.Status(fiber.StatusBadRequest).JSON("failed to create user")
+  }
+
+	return c.Status(http.StatusOK).JSON(user)
 }
