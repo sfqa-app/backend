@@ -133,7 +133,7 @@ func UserPasswordReset(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to send reset password link")
 	}
 
-	return c.Status(fiber.StatusOK).JSON(user)
+	return c.Status(fiber.StatusOK).JSON("password reset link sent")
 }
 
 func sendResetPasswordLink(user *models.User) error {

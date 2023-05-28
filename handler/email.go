@@ -27,7 +27,7 @@ Please click on the link below to confirm your email address:
 
 If you did not sign up for SFQA App, please disregard this message and do not click the link above.
 
-Thank you,
+Best regards,
 
 SFQA App Team
 `,
@@ -44,13 +44,13 @@ func NewResetPasswordEmailMessage(to, token string) (msg string) {
 	return fmt.Sprintf(`From: SFQA App <%s>
 To: %s
 Subject: Reset Your Password
-Use the link below to reset your password:
+Use the link below to reset your password
 
 %s
 
 If you did not request to reset your password, please disregard this message and do not click the link above.
 
-Thank you,
+Best regards,
 
 SFQA App Team
 `,
