@@ -9,19 +9,20 @@ import (
 // @Description	User account
 type User struct {
 	gorm.Model
-	Name            string `json:"name"`
-	Username        string `json:"username" gorm:"unique;default:null"`
-	Email           string `json:"email" gorm:"unique; not null;default:null"`
-  Password        string `json:"-" gorm:"default:null"` // FIXME: should be not null
-  Picture         string `json:"picture" gorm:"default:null"`
-  LoginMethod     string `json:"login_method" gorm:"default:null"`
+	Name          string `json:"name"`
+	Username      string `json:"username" gorm:"unique;default:null"`
+	Email         string `json:"email" gorm:"unique; not null;default:null"`
+	Password      string `json:"-" gorm:"default:null"` // FIXME: should be not null
+	Picture       string `json:"picture" gorm:"default:null"`
+	LoginMethod   string `json:"login_method" gorm:"default:null"`
 	EmailVerified bool   `json:"email_verified" gorm:"default:false"`
 }
 
 func NewUser(email, password string) *User {
 	return &User{
-		Email:    email,
-		Password: password,
+		Email:       email,
+		Password:    password,
+		LoginMethod: "email",
 	}
 }
 

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"log"
 	"os"
 	"strconv"
 	"time"
@@ -84,20 +83,66 @@ func UserCreate(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(user)
 }
 
-func SendEmailVerificationLink(user *models.User) error {
+func createToken(user *models.User, expiresAt time.Time) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
 		Issuer:    strconv.Itoa(int(user.ID)),
-		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+		ExpiresAt: expiresAt.Unix(),
 	})
 
 	token, err := claims.SignedString([]byte(secret))
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
+}
+
+func sendEmailVerificationLink(user *models.User) error {
+	token, err := createToken(user, time.Now().Add(time.Hour*24))
 	if err != nil {
 		return err
 	}
 
 	msg := NewVerificationEmailMessage(user.Email, token)
+
+	return EmailSend(msg, user.Email)
+}
+
+func UserPasswordReset(c *fiber.Ctx) error {
+	var user models.User
+
+	claims, err := getJWTCookieClaims(c)
+	if err != nil {
+		return err
+	}
+
+	userID := claims.Issuer
+
+	if res := database.DB.First(&user, userID); res.Error != nil ||
+		user.LoginMethod != "email" {
+		return c.Status(fiber.StatusBadRequest).JSON("email not found")
+	}
+
+	if !user.EmailVerified {
+		return c.Status(fiber.StatusBadRequest).JSON("email not verified")
+	}
+
+	if err := sendResetPasswordLink(&user); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON("failed to send reset password link")
+	}
+
+	return c.Status(fiber.StatusOK).JSON(user)
+}
+
+func sendResetPasswordLink(user *models.User) error {
+	token, err := createToken(user, time.Now().Add(time.Hour*24))
+	if err != nil {
+		return err
+	}
+
+	msg := NewResetPasswordEmailMessage(user.Email, token)
 
 	return EmailSend(msg, user.Email)
 }
@@ -116,19 +161,18 @@ func SendEmailVerificationLink(user *models.User) error {
 func UserDelete(c *fiber.Ctx) error {
 	var user models.User
 
-  if err := c.BodyParser(&user); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
+	claims, err := getJWTCookieClaims(c)
+	if err != nil {
+		return err
 	}
 
-  if err := UserMe(c, &user); err != nil {
-    return c.Status(fiber.StatusUnauthorized).JSON(err.Error())
-  }
+	userID := claims.Issuer
 
-	if res := database.DB.Delete(&user, user.ID); res.Error != nil {
+	if res := database.DB.Delete(&user, userID); res.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to delete user")
 	}
 
-	return c.Status(fiber.StatusOK).JSON(user)
+	return c.Status(fiber.StatusOK).JSON("user deleted")
 }
 
 // UserUpdate updates a user account info
@@ -151,9 +195,9 @@ func UserUpdate(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to parse user data")
 	}
 
-  if err := UserMe(c, &user); err != nil {
-    return c.Status(fiber.StatusUnauthorized).JSON(err.Error())
-  }
+	if err := userMe(c, &user); err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(err.Error())
+	}
 
 	if res := database.DB.Model(&user).Updates(&user); res.Error != nil {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to update user")
@@ -250,20 +294,34 @@ func ParseJwtToken(c *fiber.Ctx, token string) (*jwt.StandardClaims, error) {
 }
 
 // user is not allowed to mess with other user's account
-func UserMe(c *fiber.Ctx, user *models.User) error {
-  claims, err := ParseJwtToken(c, c.Cookies("jwt"))
-  if err != nil {
-    return errors.New("invalid token")
-  }
+func userMe(c *fiber.Ctx, user *models.User) error {
+	claims, err := getJWTCookieClaims(c)
+	if err != nil {
+		return err
+	}
 
-  userID, err := strconv.Atoi(claims.Issuer)
-  if err != nil {
-    return errors.New("invalid user id")
-  }
+	userID, err := strconv.Atoi(claims.Issuer)
+	if err != nil {
+		return errors.New("invalid user id")
+	}
 
-  if user.ID != uint(userID) {
-    return errors.New("unauthorized")
-  }
+	if user.ID != uint(userID) {
+		return errors.New("unauthorized")
+	}
 
-  return nil
+	return nil
+}
+
+// verify jwt token and return standard claims
+func getJWTCookieClaims(c *fiber.Ctx) (*jwt.StandardClaims, error) {
+	claims, err := ParseJwtToken(c, c.Cookies("jwt"))
+	if err != nil {
+		return &jwt.StandardClaims{}, errors.New("invalid token")
+	}
+
+	if claims.ExpiresAt < time.Now().Unix() {
+		return &jwt.StandardClaims{}, errors.New("expired token")
+	}
+
+	return claims, nil
 }

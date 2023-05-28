@@ -37,6 +37,28 @@ SFQA App Team
 	)
 }
 
+func NewResetPasswordEmailMessage(to, token string) (msg string) {
+	domain := os.Getenv("DOMAIN")
+	from := os.Getenv("SMTP_EMAIL")
+
+	return fmt.Sprintf(`From: SFQA App <%s>
+To: %s
+Subject: Reset Your Password
+Use the link below to reset your password:
+
+%s
+
+If you did not request to reset your password, please disregard this message and do not click the link above.
+
+Thank you,
+
+SFQA App Team
+`,
+		from,
+		to,
+		domain+"/reset-password/"+token)
+}
+
 func EmailSend(msg, to string) error {
 	from := os.Getenv("SMTP_EMAIL")
 	pass := os.Getenv("SMTP_PASSWORD")
@@ -56,10 +78,10 @@ func EmailSend(msg, to string) error {
 func EmailVerify(c *fiber.Ctx) error {
 	t := c.Params("token")
 
-  claims, err := ParseJwtToken(c, t)
-  if err != nil {
-    return c.Status(fiber.StatusBadRequest).JSON(err.Error())
-  }
+	claims, err := ParseJwtToken(c, t)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(err.Error())
+	}
 
 	userID := claims.Issuer
 
@@ -69,6 +91,10 @@ func EmailVerify(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON("user not found")
 	}
 
+  if user.EmailVerified {
+    return c.Status(fiber.StatusBadRequest).JSON("email already verified")
+  }
+
 	user.EmailVerified = true
 
 	if res := database.DB.Save(&user); res.Error != nil {
@@ -77,5 +103,5 @@ func EmailVerify(c *fiber.Ctx) error {
 
 	domain := os.Getenv("DOMAIN")
 
-  return c.Redirect(domain, fiber.StatusTemporaryRedirect)
+	return c.Redirect(domain, fiber.StatusTemporaryRedirect, fiber.StatusOK)
 }

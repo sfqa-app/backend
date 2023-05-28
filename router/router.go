@@ -18,6 +18,7 @@ func SetUpRoutes(app *fiber.App) {
 	app.Post("/login", handler.UserLogin)
 	app.Get("/logout", handler.UserLogout)
 	app.Get("/verify/:token", handler.EmailVerify)
+	app.Get("/reset-password/:token", handler.EmailVerify)
 
 	// Google
 	app.Get("/auth/google/login", handler.GoogleLogin)
@@ -27,6 +28,7 @@ func SetUpRoutes(app *fiber.App) {
 	user := app.Group("/user")
 	user.Post("/", handler.UserCreate)
 	user.Get("/:id<int>", handler.UserGet)
+	user.Post("/reset-password", handler.UserPasswordReset)
 	user.Put("/", middleware.Protected(), handler.UserUpdate)
 	user.Delete("/", middleware.Protected(), handler.UserDelete)
 }
