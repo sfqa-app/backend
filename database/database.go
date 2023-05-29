@@ -36,8 +36,9 @@ func ConnectDb() {
 		})
 
 		if err != nil {
-			log.Printf("Failed to connect to database, retrying in %v seconds\n", reconnectSecondsInterval)
-			time.Sleep(reconnectSecondsInterval * time.Second)
+			log.Printf("Failed to connect to database, retrying in %d seconds...\n", reconnectSecondsInterval)
+			time.Sleep(time.Second * reconnectSecondsInterval)
+      reconnectSecondsInterval *= 2
 		} else {
 			log.Println("connected to database")
 			break
