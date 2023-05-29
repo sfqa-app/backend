@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"os"
 	"strconv"
 	"time"
 
@@ -81,18 +80,6 @@ func UserCreate(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(user)
-}
-
-func GenerateToken(claims *jwt.StandardClaims) (token string, err error) {
-	secret := os.Getenv("JWT_SECRET")
-
-	c := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	token, err = c.SignedString([]byte(secret))
-	if err != nil {
-		return "", errors.New("failed to generate token")
-	}
-
-	return token, nil
 }
 
 func sendEmailVerificationLink(user *models.User) error {
@@ -213,7 +200,7 @@ func UserUpdate(c *fiber.Ctx) error {
 }
 
 // field is valid if it is not empty
-func isValid(field string) bool {
+func isValidField(field string) bool {
 	return field != ""
 }
 
@@ -230,7 +217,7 @@ func UserLogin(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON("failed to parse login data")
 	}
 
-	if !isValid(input.Password) || !isValid(input.Email) {
+	if !isValidField(input.Password) || !isValidField(input.Email) {
 		return c.Status(fiber.StatusBadRequest).JSON("invalid email or password")
 	}
 
@@ -285,25 +272,6 @@ func UserLogout(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
-// parse jwt token and return standard claims
-func ParseJwtToken(c *fiber.Ctx, token string) (*jwt.StandardClaims, error) {
-	secret := os.Getenv("JWT_SECRET")
-
-	t, err := jwt.ParseWithClaims(token, &jwt.StandardClaims{}, func(t *jwt.Token) (interface{}, error) {
-		return []byte(secret), nil
-	})
-	if err != nil {
-		return nil, errors.New("error parsing token")
-	}
-
-	claims, ok := t.Claims.(*jwt.StandardClaims)
-	if !ok || !t.Valid || claims.ExpiresAt < time.Now().Unix() {
-		return nil, errors.New("invalid token")
-	}
-
-	return claims, nil
-}
-
 // user is not allowed to mess with other user's account
 func userMe(c *fiber.Ctx, user *models.User) error {
 	claims, err := getJWTCookieClaims(c)
@@ -321,18 +289,4 @@ func userMe(c *fiber.Ctx, user *models.User) error {
 	}
 
 	return nil
-}
-
-// verify jwt token and return standard claims
-func getJWTCookieClaims(c *fiber.Ctx) (*jwt.StandardClaims, error) {
-	claims, err := ParseJwtToken(c, c.Cookies("jwt"))
-	if err != nil {
-		return &jwt.StandardClaims{}, errors.New("invalid token")
-	}
-
-	if claims.ExpiresAt < time.Now().Unix() {
-		return &jwt.StandardClaims{}, errors.New("expired token")
-	}
-
-	return claims, nil
 }
