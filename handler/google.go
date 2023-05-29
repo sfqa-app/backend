@@ -73,5 +73,7 @@ func GoogleCallback(c *fiber.Ctx) error {
     return c.Status(fiber.StatusBadRequest).JSON("failed to create user")
   }
 
+  SetUserCookie(c, user)
+
 	return c.Status(http.StatusOK).JSON(user)
 }

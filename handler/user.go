@@ -59,9 +59,9 @@ func UserCreate(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON("email not valid")
 	}
 
-  res := database.DB.Where("email = ?", user.Email).First(&user, user.Email)
+	res := database.DB.Where("email = ?", user.Email).First(&user, user.Email)
 	if res.Error != nil {
-    return c.Status(fiber.StatusBadRequest).JSON("failed to find user")
+		return c.Status(fiber.StatusBadRequest).JSON("failed to find user")
 	}
 
 	if user.EmailVerified {
@@ -83,24 +83,25 @@ func UserCreate(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(user)
 }
 
-func createToken(user *models.User, expiresAt time.Time) (string, error) {
+func GenerateToken(claims *jwt.StandardClaims) (token string, err error) {
 	secret := os.Getenv("JWT_SECRET")
 
-	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
-		Issuer:    strconv.Itoa(int(user.ID)),
-		ExpiresAt: expiresAt.Unix(),
-	})
-
-	token, err := claims.SignedString([]byte(secret))
+	c := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token, err = c.SignedString([]byte(secret))
 	if err != nil {
-		return "", err
+		return "", errors.New("failed to generate token")
 	}
 
 	return token, nil
 }
 
 func sendEmailVerificationLink(user *models.User) error {
-	token, err := createToken(user, time.Now().Add(time.Hour*24))
+	claims := &jwt.StandardClaims{
+		Issuer:    strconv.Itoa(int(user.ID)),
+		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+	}
+
+	token, err := GenerateToken(claims)
 	if err != nil {
 		return err
 	}
@@ -137,7 +138,12 @@ func UserPasswordReset(c *fiber.Ctx) error {
 }
 
 func sendResetPasswordLink(user *models.User) error {
-	token, err := createToken(user, time.Now().Add(time.Hour*24))
+	claims := &jwt.StandardClaims{
+		Issuer:    strconv.Itoa(int(user.ID)),
+		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+	}
+
+	token, err := GenerateToken(claims)
 	if err != nil {
 		return err
 	}
@@ -228,8 +234,8 @@ func UserLogin(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON("invalid email or password")
 	}
 
-	var user models.User
-	if res := database.DB.Where("email = ?", input.Email).First(&user); res.Error != nil {
+	var user *models.User
+	if res := database.DB.Where("email = ?", input.Email).First(user); res.Error != nil {
 		return c.Status(fiber.StatusNotFound).JSON("email not found")
 	}
 
@@ -243,29 +249,34 @@ func UserLogin(c *fiber.Ctx) error {
 		})
 	}
 
-	expireDate := time.Now().Add(time.Hour * 7 * 24) // 7 days
-
-	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
-		Issuer:    strconv.Itoa(int(user.ID)),
-		ExpiresAt: expireDate.Unix(),
-	})
-
-	secret := os.Getenv("JWT_SECRET")
-	token, err := claims.SignedString([]byte(secret))
-	if err != nil {
-		return c.SendStatus(fiber.StatusInternalServerError)
-	}
-
-	cookie := fiber.Cookie{
-		Name:     "jwt",
-		Value:    token,
-		Expires:  expireDate,
-		HTTPOnly: true,
-	}
-
-	c.Cookie(&cookie)
+  SetUserCookie(c, user)
 
 	return c.SendStatus(fiber.StatusOK)
+}
+
+func SetUserCookie(c *fiber.Ctx, user *models.User) error {
+  expireDate := time.Now().Add(time.Hour * 7 * 24)
+
+  claims := &jwt.StandardClaims{
+    Issuer:    strconv.Itoa(int(user.ID)),
+    ExpiresAt: expireDate.Unix(),
+  }
+
+  token, err := GenerateToken(claims)
+  if err != nil {
+    return err
+  }
+
+  cookie := fiber.Cookie{
+    Name:     "jwt",
+    Value:    token,
+    Expires:  expireDate,
+    HTTPOnly: true,
+  }
+
+  c.Cookie(&cookie)
+
+  return nil
 }
 
 // UserLogout logout user
