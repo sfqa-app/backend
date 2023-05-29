@@ -69,7 +69,7 @@ func GoogleCallback(c *fiber.Ctx) error {
     EmailVerified: true,
   }
 
-  if res := database.DB.Create(&user); res.Error != nil {
+  if res := database.DB.FirstOrCreate(&user, user); res.Error != nil {
     return c.Status(fiber.StatusBadRequest).JSON("failed to create user")
   }
 
