@@ -28,21 +28,6 @@ func ParseJwtToken(c *fiber.Ctx, token string) (*jwt.StandardClaims, error) {
 	return claims, nil
 }
 
-
-// verify jwt token and return standard claims
-func getJWTCookieClaims(c *fiber.Ctx) (*jwt.StandardClaims, error) {
-	claims, err := ParseJwtToken(c, c.Cookies("jwt"))
-	if err != nil {
-		return &jwt.StandardClaims{}, errors.New("invalid token")
-	}
-
-	if claims.ExpiresAt < time.Now().Unix() {
-		return &jwt.StandardClaims{}, errors.New("expired token")
-	}
-
-	return claims, nil
-}
-
 func GenerateToken(claims *jwt.StandardClaims) (token string, err error) {
 	secret := os.Getenv("JWT_SECRET")
 
@@ -54,4 +39,3 @@ func GenerateToken(claims *jwt.StandardClaims) (token string, err error) {
 
 	return token, nil
 }
-

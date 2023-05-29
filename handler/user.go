@@ -101,7 +101,7 @@ func sendEmailVerificationLink(user *models.User) error {
 func UserPasswordReset(c *fiber.Ctx) error {
 	var user models.User
 
-	claims, err := getJWTCookieClaims(c)
+	claims, err := ParseJwtToken(c, c.Cookies("jwt"))
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func sendResetPasswordLink(user *models.User) error {
 func UserDelete(c *fiber.Ctx) error {
 	var user models.User
 
-	claims, err := getJWTCookieClaims(c)
+	claims, err := ParseJwtToken(c, c.Cookies("jwt"))
 	if err != nil {
 		return err
 	}
@@ -274,7 +274,7 @@ func UserLogout(c *fiber.Ctx) error {
 
 // user is not allowed to mess with other user's account
 func userMe(c *fiber.Ctx, user *models.User) error {
-	claims, err := getJWTCookieClaims(c)
+	claims, err := ParseJwtToken(c, c.Cookies("jwt"))
 	if err != nil {
 		return err
 	}
